@@ -281,3 +281,21 @@ class TestInfraCompat(ImpalaTestSuite):
     table = impala_testinfra_cursor.describe_table(table_primary_keys_map['table'])
     assert table_primary_keys_map['primary_keys'] == table.primary_key_names
     assert table_primary_keys_map['updatable_columns'] == table.updatable_column_names
+
+  @SkipIf.kudu_not_supported
+  @pytest.mark.parametrize('column_pk_map', [
+      {'all_columns': 'a INT, b INT, c INT',
+       'pk_sequence': 'a, b'},
+      {'all_columns': 'a INT, b INT, c INT',
+       'pk_sequence': 'b, a'}])
+  def test_pk_ordering(self, unique_database, impala_testinfra_cursor, column_pk_map):
+    fq_table = '{db}.kudu_table'.format(db=unique_database)
+    create_table = '''CREATE TABLE {table} (
+    {all_columns},
+    PRIMARY KEY ({pk_sequence})
+    ) DISTRIBUTE BY HASH (a) INTO 3 BUCKETS STORED AS KUDU'''.format(
+        table=fq_table, all_columns=column_pk_map['all_columns'],
+        pk_sequence=column_pk_map['pk_sequence'])
+    self.client.execute(create_table)
+    assert impala_testinfra_cursor._fetch_primary_key_names(fq_table) == \
+        tuple(column_pk_map['pk_sequence'].split(', '))
