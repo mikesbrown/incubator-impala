@@ -943,7 +943,7 @@ def load_random_queries_and_populate_runtime_info(query_generator, model_transla
   LOG.info("Generating random queries")
   def generate_candidates():
     while True:
-      query_model = query_generator.create_query(tables)
+      query_model = query_generator.generate_statement(tables)
       sql = model_translator.write_query(query_model)
       query = Query()
       query.sql = sql
